@@ -16,7 +16,7 @@ jobs:
       - name: Deploy app
         run: |
           cd /home/ubuntu/mlaku-malu-app
-          git pull origin main
+          git pull origin master
           npm ci
           npm run build
           npx prisma generate
