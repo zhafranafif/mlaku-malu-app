@@ -1,0 +1,42 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to EC2
+      run: |
+        ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          cd /home/ubuntu/mlaku-malu-app
+          
+          # Pull latest changes
+          git pull origin main
+          
+          # Install dependencies (use ci for faster, reliable builds)
+          npm ci
+          
+          # Build the NestJS app
+          npm run build
+          
+          # Run Prisma commands
+          npx prisma generate
+          npx prisma migrate deploy
+          
+          # Restart the app with PM2
+          pm2 restart mlaku-malu-app || pm2 start dist/main.js --name mlaku-malu-app
+        EOF
