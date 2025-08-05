@@ -47,4 +47,4 @@ jobs:
 
              echo "🚦 Restarting PM2 app..."
              pm2 restart mlaku-malu-app || pm2 start dist/main.js --name mlaku-malu-app
-           EOF
+          EOF
