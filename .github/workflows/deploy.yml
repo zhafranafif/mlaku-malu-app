@@ -29,6 +29,9 @@ jobs:
 
              cd /home/ubuntu/mlaku-malu-app
 
+            git reset --hard
+            git clean -fd
+
              echo "🔄 Pulling latest changes..."
              git pull origin master
 
