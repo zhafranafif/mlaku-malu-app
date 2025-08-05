@@ -44,7 +44,7 @@ export class AuthController {
     };
   }
 
-  @Post('Register')
+  @Post('register')
   async Register(
     @Body() { name, username, email, password }: UserRegisterDto,
   ): Promise<CommonResponseInterface<RegisterInterface>> {

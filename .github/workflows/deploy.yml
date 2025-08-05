@@ -43,6 +43,7 @@ jobs:
 
              echo "🧬 Prisma commands..."
              npx prisma generate
+             npx prisma db push
              npx prisma migrate deploy
 
              echo "🚦 Restarting PM2 app..."
