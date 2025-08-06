@@ -2,11 +2,15 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsEnum,
   IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
+import { Status } from '@prisma/client';
 
 export class DestinationUpdateDto {
   @ApiProperty()
@@ -26,6 +30,12 @@ export class DestinationUpdateDto {
   @IsNotEmpty()
   @Type(() => Date)
   endDate!: Date;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsNotEmpty()
+  @IsEnum(Status)
+  status!: Status;
 }
 
 export class DestinationCreateDto {
@@ -64,6 +74,10 @@ export class QueryParamDestinationDto {
   endDate?: string;
 
   @IsOptional()
+  @IsEnum(Status)
+  status?: Status;
+
+  @IsOptional()
   @IsString()
   @IsIn([
     'id',
@@ -80,4 +94,15 @@ export class QueryParamDestinationDto {
   @IsString()
   @IsIn(['asc', 'desc'])
   sortOrder?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  limit?: number = 5;
 }

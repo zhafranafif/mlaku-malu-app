@@ -14,3 +14,12 @@ export interface UpdateCustomerInterface {
   email?: string;
   destinations?: DestinationInterface[];
 }
+
+export interface CustomerInterfaceResponse {
+  id: number;
+  name: string;
+  email: string;
+  destinations: DestinationInterface[];
+  createdAt: Date;
+  updatedAt: null | Date;
+}

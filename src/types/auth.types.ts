@@ -14,11 +14,13 @@ export interface CommonResponseInterface<T> {
   code: number;
   message: string;
   data: T;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 }
 
 export interface RegisterInterface {
   username: string;
   name: string;
   email: string;
-  password: string;
 }

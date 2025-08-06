@@ -6,13 +6,17 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { Role, Status } from '@prisma/client';
 import { PrismaService } from './prisma.service';
 import {
   CreateCustomerInterface,
+  CustomerInterfaceResponse,
   UpdateCustomerInterface,
 } from './types/customer.types';
-import { DestinationInterface } from './types/destination.types';
+import {
+  DestinationInterfaceResponse,
+  DestinationInterface,
+} from './types/destination.types';
 import {
   DestinationCreateDto,
   DestinationUpdateDto,
@@ -22,12 +26,56 @@ import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
 @Injectable()
 export class AppService {
   constructor(private readonly prismaService: PrismaService) {}
-  async getDestination(customerId: number): Promise<any> {
+  async getDestinationByCustomerId(
+    customerId: number,
+    page: number = 1,
+    limit: number = 5,
+  ): Promise<{
+    data: DestinationInterface[];
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     try {
-      if (!customerId) throw new BadRequestException('User not found');
-      const data = await this.prismaService.destinationHistory.findMany({
-        where: { customerId: customerId },
+      const skip = (page - 1) * limit;
+      const customer = await this.prismaService.customer.findUnique({
+        where: { id: customerId },
+        include: { destinations: true },
       });
+      if (!customer) throw new NotFoundException('Customer not found');
+      const [data, count] = await this.prismaService.$transaction([
+        this.prismaService.destinationHistory.findMany({
+          where: { customerId: customerId },
+          skip: skip,
+          take: limit,
+        }),
+        this.prismaService.destinationHistory.count({
+          where: { customerId: customerId },
+        }),
+      ]);
+      return {
+        data: data,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(count / limit),
+      };
+    } catch (error) {
+      console.log(error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Internal server error');
+    }
+  }
+
+  async getDestinationById(
+    destinationId: number,
+  ): Promise<DestinationInterface> {
+    try {
+      const data = await this.prismaService.destinationHistory.findUnique({
+        where: { id: destinationId },
+      });
+      if (!data) throw new NotFoundException('Destination not found');
       return data;
     } catch (error) {
       console.log(error);
@@ -42,47 +90,91 @@ export class AppService {
     name?: string,
     startDate?: string,
     endDate?: string,
+    status?: Status,
     sortBy?: string,
-    SortOrder?: string,
-  ): Promise<any> {
+    sortOrder?: string,
+    page: number = 1,
+    limit: number = 5,
+  ): Promise<{
+    data: DestinationInterface[];
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const skip = (page - 1) * limit;
     try {
       if (sortBy === '' || !sortBy || sortBy === undefined) {
         sortBy = 'id';
       }
-      if (SortOrder === '' || !SortOrder || SortOrder === undefined) {
-        SortOrder = 'asc';
+      if (sortOrder === '' || !sortOrder || sortOrder === undefined) {
+        sortOrder = 'asc';
       }
-      const data = await this.prismaService.destinationHistory.findMany({
-        where: {
-          destination: {
-            contains: name,
+      const [data, count] = await this.prismaService.$transaction([
+        this.prismaService.destinationHistory.findMany({
+          where: {
+            destination: {
+              contains: name,
+            },
+            ...(status && { status: { equals: status } }),
+            ...(startDate && {
+              startDate: {
+                gte: new Date(startDate),
+              },
+            }),
+            ...(endDate && {
+              endDate: {
+                lte: new Date(endDate),
+              },
+            }),
           },
-          ...(startDate && {
-            startDate: {
-              gte: new Date(startDate),
+          orderBy: {
+            [sortBy]: sortOrder,
+          },
+          skip: skip,
+          take: limit,
+        }),
+        this.prismaService.destinationHistory.count({
+          where: {
+            destination: {
+              contains: name,
             },
-          }),
-          ...(endDate && {
-            endDate: {
-              lte: new Date(endDate),
-            },
-          }),
-        },
-        orderBy: {
-          [sortBy]: SortOrder,
-        },
-      });
-      return data;
+            ...(startDate && {
+              startDate: {
+                gte: new Date(startDate),
+              },
+            }),
+            ...(endDate && {
+              endDate: {
+                lte: new Date(endDate),
+              },
+            }),
+          },
+        }),
+      ]);
+      return {
+        data: data,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(count / limit),
+      };
     } catch (error) {
       console.log(error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Internal server error');
     }
   }
 
-  async createDestination(destination: DestinationCreateDto): Promise<any> {
+  async createDestination(
+    destination: DestinationCreateDto,
+  ): Promise<DestinationInterfaceResponse> {
     try {
-      if (!destination.customerId)
-        throw new BadRequestException('User not found');
+      const customer = await this.prismaService.customer.findUnique({
+        where: { id: destination.customerId },
+        include: { destinations: true },
+      });
+      if (!customer) throw new NotFoundException('Customer not found');
       const data = await this.prismaService.destinationHistory.create({
         data: {
           destination: destination.destination,
@@ -101,19 +193,28 @@ export class AppService {
     }
   }
 
-  async deleteDestination(destinationId: number): Promise<any> {
+  async deleteDestination(
+    destinationId: number,
+  ): Promise<DestinationInterfaceResponse> {
     try {
-      const customer = await this.prismaService.customer.findUnique({
-        where: { id: destinationId },
+      const customer = await this.prismaService.customer.findMany({
+        where: { destinations: { some: { id: destinationId } } },
         include: { destinations: true },
       });
       if (!customer) throw new NotFoundException('User not found');
 
-      if (customer.destinations.length <= 1) {
+      if ((customer[0]?.destinations?.length ?? 0) <= 1) {
         throw new BadRequestException(
           'User must have at least one destination',
         );
       }
+
+      const destination =
+        await this.prismaService.destinationHistory.findUnique({
+          where: { id: destinationId },
+        });
+
+      if (!destination) throw new NotFoundException('Destination not found');
 
       const data = await this.prismaService.destinationHistory.delete({
         where: { id: destinationId },
@@ -133,14 +234,19 @@ export class AppService {
     destination: DestinationUpdateDto,
   ): Promise<DestinationInterface> {
     try {
-      if (!destinationId)
-        throw new BadRequestException('Destination not found');
+      const destinationHistory =
+        await this.prismaService.destinationHistory.findUnique({
+          where: { id: destinationId },
+        });
+      if (!destinationHistory)
+        throw new NotFoundException('Destination not found');
       const data = await this.prismaService.destinationHistory.update({
         where: { id: destinationId },
         data: {
           destination: destination.destination,
           startDate: destination.startDate,
           endDate: destination.endDate,
+          status: destination.status,
           updatedAt: new Date(),
         },
       });
@@ -154,19 +260,91 @@ export class AppService {
     }
   }
 
-  async getCustomers(): Promise<any> {
+  async getCustomers(
+    name?: string,
+    email?: string,
+    sortBy?: string,
+    sortOrder?: string,
+    createdFrom?: string,
+    createdTo?: string,
+    updatedFrom?: string,
+    updatedTo?: string,
+    page: number = 1,
+    limit: number = 5,
+  ): Promise<{
+    data: CustomerInterfaceResponse[];
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     try {
-      const data = await this.prismaService.customer.findMany({
-        include: { destinations: true },
-      });
-      return data;
+      const skip = (page - 1) * limit;
+      if (sortBy === '' || !sortBy || sortBy === undefined) {
+        sortBy = 'id';
+      }
+      if (sortOrder === '' || !sortOrder || sortOrder === undefined) {
+        sortOrder = 'asc';
+      }
+      const [data, count] = await this.prismaService.$transaction([
+        this.prismaService.customer.findMany({
+          where: {
+            name: {
+              contains: name,
+            },
+            email: {
+              contains: email,
+            },
+            createdAt: {
+              gte: createdFrom,
+              lte: createdTo,
+            },
+            updatedAt: {
+              gte: updatedFrom,
+              lte: updatedTo,
+            },
+          },
+          orderBy: {
+            [sortBy]: sortOrder,
+          },
+          include: { destinations: true },
+          skip: skip,
+          take: limit,
+        }),
+        this.prismaService.customer.count({
+          where: {
+            name: {
+              contains: name,
+            },
+            email: {
+              contains: email,
+            },
+            createdAt: {
+              gte: createdFrom,
+              lte: createdTo,
+            },
+            updatedAt: {
+              gte: updatedFrom,
+              lte: updatedTo,
+            },
+          },
+        }),
+      ]);
+
+      return {
+        data: data,
+        page: page,
+        limit: limit,
+        totalPages: Math.ceil(count / limit),
+      };
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException('Internal server error');
     }
   }
 
-  async getCustomer(customerId: number): Promise<any> {
+  async getCustomerById(
+    customerId: number,
+  ): Promise<CustomerInterfaceResponse> {
     try {
       const data = await this.prismaService.customer.findUnique({
         where: { id: customerId },
@@ -185,7 +363,7 @@ export class AppService {
 
   async createCustomer(
     customer: CreateCustomerDto,
-  ): Promise<CreateCustomerInterface> {
+  ): Promise<CustomerInterfaceResponse> {
     try {
       const data = await this.prismaService.customer.create({
         data: {
@@ -213,9 +391,15 @@ export class AppService {
     }
   }
 
-  async deleteCustomer(customerId: number): Promise<any> {
+  async deleteCustomer(
+    customerId: number,
+  ): Promise<Omit<CustomerInterfaceResponse, 'destinations'>> {
     try {
-      if (!customerId) throw new BadRequestException('Customer not found');
+      const customer = await this.prismaService.customer.findUnique({
+        where: { id: customerId },
+        include: { destinations: true || undefined },
+      });
+      if (!customer) throw new NotFoundException('Customer not found');
       const data = await this.prismaService.customer.delete({
         where: { id: customerId },
       });
@@ -232,10 +416,13 @@ export class AppService {
   async updateCustomer(
     customerId: number,
     customerData: UpdateCustomerDto,
-  ): Promise<void> {
+  ): Promise<Omit<CustomerInterfaceResponse, 'destinations'>> {
     try {
-      if (!customerId) throw new BadRequestException('Customer not found');
-      await this.prismaService.customer.update({
+      const customer = await this.prismaService.customer.findUnique({
+        where: { id: customerId },
+      });
+      if (!customer) throw new NotFoundException('Customer Not Found');
+      const data = await this.prismaService.customer.update({
         where: {
           id: customerId,
         },
@@ -245,6 +432,29 @@ export class AppService {
           updatedAt: new Date(),
         },
       });
+      return data;
+    } catch (error) {
+      console.log(error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Internal server error');
+    }
+  }
+
+  async downloadDestinationHistory(
+    customerId: number,
+  ): Promise<DestinationInterface[]> {
+    try {
+      const customer = await this.prismaService.customer.findUnique({
+        where: { id: customerId },
+        include: { destinations: true },
+      });
+      if (!customer) throw new NotFoundException('Customer Not Found');
+      const data = await this.prismaService.destinationHistory.findMany({
+        where: { customerId: customerId },
+      });
+      return data;
     } catch (error) {
       console.log(error);
       if (error instanceof HttpException) {

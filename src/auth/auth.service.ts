@@ -1,8 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { BcryptService } from './bcrypt.service';
 import { JwtService } from '@nestjs/jwt';
-import { Role } from '@prisma/client';
 import { RegisterInterface, UserLoginInterface } from 'src/types/auth.types';
 
 @Injectable()
@@ -51,7 +54,7 @@ export class AuthService {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Internal server error');
+      throw new InternalServerErrorException('Internal server error');
     }
   }
 
@@ -71,13 +74,17 @@ export class AuthService {
           password: hashedPassword,
         },
       });
-      return user;
+      return {
+        username: user.username,
+        name: user.name,
+        email: user.email,
+      };
     } catch (error) {
       console.log(error);
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new BadRequestException('Internal server error');
+      throw new InternalServerErrorException('Internal server error');
     }
   }
 }

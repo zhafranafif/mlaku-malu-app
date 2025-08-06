@@ -1,6 +1,5 @@
-import { Injectable, Module } from '@nestjs/common';
-4;
-import { JwtModule, JwtService } from '@nestjs/jwt';
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 import { BcryptService } from './bcrypt.service';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
