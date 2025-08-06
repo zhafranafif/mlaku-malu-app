@@ -21,9 +21,11 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
+### Mlaku-Malu
+
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Aplikasi ini merupakan sebuah sistem backend berbasis REST API yang dibangun untuk mendukung operasional Biro Perjalanan Mlaku-Mulu dalam melakukan pendataan turis yang menggunakan layanan mereka. Backend ini dirancang untuk digunakan oleh pegawai internal, sehingga terdapat fitur autentikasi dan otorisasi untuk melindungi data yang bersifat sensitif.
 
 ## Project setup
 
@@ -59,40 +61,42 @@ $ npm run test:cov
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+ 1. Clone and Setup Project on EC2
+# SSH into your EC2 instance
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+ssh ubuntu@<your-ec2-public-ip>
+```
+# Clone your repository
+```bash
+git clone https://github.com/yourusername/your-nestjs-project.git
+cd your-nestjs-project
+```
+# Install dependencies
+```bash
+npm install
+```
+2. # .env
+```bash
+DATABASE_URL="mysql://username:password@localhost:3306/yourdbname"
+JWT_SECRET=your-jwt-secret
+```
+3. Prisma DB Setup
+```bash
+npx prisma generate
+npx prisma db push
+```
+5. Install depedencies and Build
+```
+npm install --legacy-peer-deps
+npm run build
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+7. Start or restart app with PM2
+```bash
+pm2 restart mlaku-malu-app
+# Or if not started yet
+pm2 start dist/main.js --name mlaku-malu-app
+```
 
-## Resources
 
-Check out a few resources that may come in handy when working with NestJS:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
