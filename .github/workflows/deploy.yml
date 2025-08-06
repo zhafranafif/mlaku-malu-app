@@ -35,7 +35,7 @@ jobs:
              echo "🔄 Pulling latest changes..."
              git pull origin master
 
-             echo "${{ secrets.ENV_FILE }}" > /home/ubuntu/mlaku-malu-app/.env
+             echo "${{ secrets.ENV_FILE }}" > .env
 
              echo "🧬 Prisma commands..."
              npx prisma generate
