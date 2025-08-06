@@ -62,20 +62,20 @@ $ npm run test:cov
 ## Deployment
 
  1. Clone and Setup Project on EC2
-# SSH into your EC2 instance
+### SSH into your EC2 instance
 ```bash
 ssh ubuntu@<your-ec2-public-ip>
 ```
-# Clone your repository
+### Clone your repository
 ```bash
 git clone https://github.com/yourusername/your-nestjs-project.git
 cd your-nestjs-project
 ```
-# Install dependencies
+### Install dependencies
 ```bash
 npm install
 ```
-2. # .env
+2. .env
 ```bash
 DATABASE_URL="mysql://username:password@localhost:3306/yourdbname"
 JWT_SECRET=your-jwt-secret
