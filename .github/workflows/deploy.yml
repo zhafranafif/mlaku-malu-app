@@ -35,11 +35,13 @@ jobs:
              echo "🔄 Pulling latest changes..."
              git pull origin master
 
+             echo "${{ secrets.ENV_FILE }}" > /home/ubuntu/mlaku-malu-app/.env
+
              echo "🧬 Prisma commands..."
              npx prisma generate
              npx prisma db push
              npx prisma migrate deploy
-             
+
              echo "📦 Installing dependencies..."
              npm install --legacy-peer-deps --no-optional
 
